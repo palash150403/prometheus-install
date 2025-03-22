@@ -1,0 +1,24 @@
+ local.file_match "local_files" {
+     path_targets = [{
+                __address__ = "localhost",
+                __path__    = "/var/log/*.log",
+                job         = "application",
+     }]
+     sync_period = "5s"
+ }
+  loki.source.file "log_scrape" {
+    targets    = local.file_match.local_files.targets
+    forward_to = [loki.write.grafana_loki.receiver]
+    tail_from_end = true
+  }
+
+  loki.write "grafana_loki" {
+    endpoint {
+      url = "http://localhost:3100/loki/api/v1/push"
+
+      // basic_auth {
+      //  username = "admin"
+      //  password = "admin"
+      // }
+    }
+  }
