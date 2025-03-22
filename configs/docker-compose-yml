@@ -16,6 +16,14 @@ services:
     #volumes:
      # - alloydata:/var/lib/alloy/data
       #- ./config.alloy:/etc/alloy/config.alloy
+  mimir:
+    image: grafana/mimir:latest
+    ports:
+      - "9009:9009"
+    command: --config.file=/etc/mimir/demo.yaml
+    volumes:
+      - ./mimir-demo.yaml:/etc/mimir/demo.yaml
+
   grafana:
     environment:
       - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
@@ -36,14 +44,6 @@ services:
           url: http://loki:3100
           basicAuth: false
           isDefault: false
-          version: 1
-          editable: false
-        - name: Prometheus
-          type: prometheus
-          orgId: 1
-          url: http://prometheus:9090
-          basicAuth: false
-          isDefault: true
           version: 1
           editable: false
         EOF
