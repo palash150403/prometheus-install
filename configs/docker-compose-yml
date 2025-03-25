@@ -5,6 +5,8 @@ services:
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - lokidata:/loki
 #  alloy:
  #   image: grafana/alloy:latest
   #  ports:
@@ -23,6 +25,14 @@ services:
     command: --config.file=/etc/mimir/demo.yaml
     volumes:
       - ./mimir-demo.yaml:/etc/mimir/demo.yaml
+
+#  prometheus:
+ #   image: prom/prometheus:v2.47.0
+  #  command:
+   #   - --web.enable-remote-write-receiver
+    #  - --config.file=/etc/prometheus/prometheus.yml
+    #ports:
+     # - "9090:9090"
 
   grafana:
     environment:
