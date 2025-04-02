@@ -5,23 +5,41 @@ discovery.relabel "logs_integrations_integrations_azure_event_hubs" {
       source_labels = ["__meta_kafka_topic"]
       target_label  = "topic"
     }
-  }
+}
 
-  loki.source.azure_event_hubs "logs_integrations_integrations_azure_event_hubs" {
+loki.source.azure_event_hubs "logs_integrations_integrations_azure_event_hubs" {
     fully_qualified_namespace = "loki-eventhub-ns.servicebus.windows.net:9093"
-    event_hubs                = ["loki-eventhub-1"]
+    event_hubs                = ["aks-eventhub"]
 
     authentication {
       mechanism         = "connection_string"
-      connection_string = "<connection-string-of-eventhub>"
+      connection_string = "<connection-connection_string>"
     }
+
     use_incoming_timestamp = true
     relabel_rules          = discovery.relabel.logs_integrations_integrations_azure_event_hubs.rules
     labels                 = {
       job = "integrations/azure_event_hubs",
     }
+
+    forward_to = [loki.process.process_logs.receiver]
+}
+
+loki.process "process_logs" {
+    stage.json {
+        expressions = { "user" = "user", "message" = "resultDescription" }
+    }
+
+    stage.labels {
+        values = { "user" = "user" }
+    }
+
+    stage.output {
+        source = "message"
+    }
     forward_to = [loki.write.grafana_loki.receiver]
-  }
+}
+
 
   loki.write "grafana_loki" {
     endpoint {
