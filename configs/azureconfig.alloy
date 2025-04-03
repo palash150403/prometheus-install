@@ -7,31 +7,34 @@ discovery.relabel "logs_integrations_integrations_azure_event_hubs" {
     }
 }
 
-loki.source.azure_event_hubs "logs_integrations_integrations_azure_event_hubs" {
-    fully_qualified_namespace = "loki-eventhub-ns.servicebus.windows.net:9093"
-    event_hubs                = ["aks-eventhub"]
+
+loki.source.azure_event_hubs "alpesh_logs_integrations_integrations_azure_event_hubs" {
+    fully_qualified_namespace = "test-event-hub-loki.servicebus.windows.net:9093"
+    event_hubs                = ["test-event-hub-lloki"]
 
     authentication {
       mechanism         = "connection_string"
-      connection_string = "<connection-connection_string>"
+      connection_string = "<connection_string>"
     }
 
-    use_incoming_timestamp = true
+    //use_incoming_timestamp = true
     relabel_rules          = discovery.relabel.logs_integrations_integrations_azure_event_hubs.rules
-    labels                 = {
-      job = "integrations/azure_event_hubs",
-    }
+    //relabel_rules          = discovery.relabel.logs_integrations_integrations_azure_event_hubs.rules
+    //labels                 = {
+    //  job = "integrations/azure_event_hubs",
+    //}
 
     forward_to = [loki.process.process_logs.receiver]
+    //forward_to = [loki.write.grafana_loki.receiver]
 }
 
 loki.process "process_logs" {
     stage.json {
-        expressions = { "user" = "user", "message" = "resultDescription" }
+        expressions = { "user" = "user", "message" = "resultDescription", "category" = "category", "level" = "level" }
     }
 
     stage.labels {
-        values = { "user" = "user" }
+        values = { "category" = "category", "level" = "level" }
     }
 
     stage.output {
