@@ -3,18 +3,18 @@ discovery.relabel "logs_integrations_integrations_azure_event_hubs" {
 
     rule {
       source_labels = ["__meta_kafka_topic"]
-      target_label  = "topic"
+      target_label  = "source"
     }
 }
 
 
 loki.source.azure_event_hubs "alpesh_logs_integrations_integrations_azure_event_hubs" {
-    fully_qualified_namespace = "test-event-hub-loki.servicebus.windows.net:9093"
-    event_hubs                = ["test-event-hub-lloki"]
+    fully_qualified_namespace = "loki-eventhub-ns.servicebus.windows.net:9093"
+    event_hubs                = ["aks-eventhub"]
 
     authentication {
       mechanism         = "connection_string"
-      connection_string = "<connection_string>"
+      connection_string = "connection_string"
     }
 
     //use_incoming_timestamp = true
@@ -30,19 +30,61 @@ loki.source.azure_event_hubs "alpesh_logs_integrations_integrations_azure_event_
 
 loki.process "process_logs" {
     stage.json {
-        expressions = { "user" = "user", "message" = "resultDescription", "category" = "category", "level" = "level" }
+        expressions = { "resultDescription" = "resultDescription", "category" = "category", "level" = "level", "resourceId" = "resourceId" }
     }
 
     stage.labels {
-        values = { "category" = "category", "level" = "level" }
+        values = { "category" = "category", "level" = "level", "resourceId" = "resourceId" }
     }
 
     stage.output {
-        source = "message"
+        source = "resultDescription"
     }
-    forward_to = [loki.write.grafana_loki.receiver]
+    stage.label_drop {
+        values = [ "job", "service_name" ]
+    }
+
+    forward_to = [loki.process.process_logs3.receiver]
 }
 
+loki.process "process_logs3" {
+    stage.json {
+        expressions = { "identity" = "identity" }
+    }
+
+
+    stage.output {
+        source = "identity"
+    }
+
+    forward_to = [loki.process.process_logs1.receiver]
+}
+
+loki.process "process_logs1" {
+    stage.json {
+        expressions = { "claims" = "claims" }
+    }
+
+
+    stage.output {
+        source = "claims"
+    }
+
+    //forward_to = [loki.write.grafana_loki.receiver]
+    forward_to = [loki.process.process_logs2.receiver]
+}
+
+loki.process "process_logs2" {
+    stage.json {
+        expressions = { "name" = "name" }
+    }
+
+    stage.output {
+        source = "name"
+    }
+
+    forward_to = [loki.write.grafana_loki.receiver]
+}
 
   loki.write "grafana_loki" {
     endpoint {
