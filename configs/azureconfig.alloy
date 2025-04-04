@@ -7,19 +7,30 @@ discovery.relabel "logs_integrations_integrations_azure_event_hubs" {
     }
 }
 
-
 loki.source.azure_event_hubs "alpesh_logs_integrations_integrations_azure_event_hubs" {
     fully_qualified_namespace = "loki-eventhub-ns.servicebus.windows.net:9093"
     event_hubs                = ["aks-eventhub"]
 
     authentication {
       mechanism         = "connection_string"
-      connection_string = "connection_string"
+      connection_string = "Endpoint=sb://loki-eventhub-ns.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey="
     }
 
     relabel_rules          = discovery.relabel.logs_integrations_integrations_azure_event_hubs.rules
-
     forward_to = [loki.process.process_logs.receiver]
+}
+
+loki.source.azure_event_hubs "palash_logs_integrations_integrations_azure_event_hubs" {
+    fully_qualified_namespace = "loki-eventhub-ns.servicebus.windows.net:9093"
+    event_hubs                = ["loki-eventhub-1"]
+
+    authentication {
+      mechanism         = "connection_string"
+      connection_string = "Endpoint=sb://loki-eventhub-ns.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey="
+    }
+
+    relabel_rules          = discovery.relabel.logs_integrations_integrations_azure_event_hubs.rules
+    forward_to = [loki.process.process_logss.receiver]
 }
 
 loki.process "process_logs" {
@@ -28,35 +39,45 @@ loki.process "process_logs" {
             "resourceId"    = "resourceId",
             "operationName" = "operationName",
             "category"      = "category",
-            "identity"      = "identity",
-            "resultDescription" = "resultDescription",
+            "identity"      = "identity.claims.name",
+            "name"      = "identity",
         }
     }
-
+    stage.regex {
+       source = "resourceId"
+       expression = "(?i).*/providers/[^/]+/[^/]+/(?P<resource_name>[^/]+)"
+    }
+    stage.regex {
+        source     = "operationName"
+        expression = "(?i).*/(?P<op_short>[^/]+/[^/]+)$"
+    }
     stage.labels {
-        values = { "category" = "category" }
-    }
-
-    stage.json {
-        source      = "identity"
-        expressions = {claims = "claims"}
-    }
-
-    stage.json {
-        source      = "claims"
-        expressions = {name = "name"}
+        values = { "category" = "category", "level" = "level", "resourceId" = "resourceId" }
     }
 
     stage.template {
-        source = "message"
-        template = "{{ .name }} has performed {{ .operationName }} on {{ .resourceId }} "
+        source = "name"
+        template = "{{ .identity }} has performed {{ .op_short }} on {{ .resource_name }}"
     }
+
     stage.output {
-        source = "message"
+        source = "name"
     }
+
     forward_to = [loki.write.grafana_loki.receiver]
+
 }
 
+loki.process "process_logss" {
+  forward_to = [loki.write.grafana_loki.receiver]
+
+  stage.json {
+    expressions = {"resultDescription" = "resultDescription"}
+  }
+  stage.output {
+        source = "resultDescription"
+  }
+}
 
   loki.write "grafana_loki" {
     endpoint {
